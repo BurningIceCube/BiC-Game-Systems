@@ -75,6 +75,19 @@ npm run example:weather
 npm run example:logger
 ```
 
+### Running Tests
+
+```bash
+npm test
+```
+
+> Runs the full test suite via [Jest](https://jestjs.io/).  
+> To run with coverage reporting:
+
+```bash
+npx jest --coverage
+```
+
 ---
 
 ## Why "BiC Game Systems"?

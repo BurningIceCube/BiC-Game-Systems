@@ -369,14 +369,6 @@ export class WeatherManager<
         return entry;
     }
 
-    /**
-     * Select a weather entry without mutating state.
-     * Same as {@link peek} (preferred).
-     * @deprecated Use {@link peek} instead.
-     */
-    public pick(options: WeatherPickOptions<TContext> = {}): WeatherEntry<TData> {
-        return this.peek(options);
-    }
 
     /**
      * Select a weather entry via weighted random without changing currentWeather.
@@ -387,14 +379,6 @@ export class WeatherManager<
         return this.selectWeighted(debug);
     }
 
-    /**
-     * Select a weather entry and update currentWeather.
-     * Same as {@link next} (preferred).
-     * @deprecated Use {@link next} instead.
-     */
-    public poll(options: WeatherPickOptions<TContext> = {}): WeatherEntry<TData> {
-        return this.next(options);
-    }
 
     /**
      * Select a weather entry via weighted random and set it as current.
