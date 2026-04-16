@@ -1,0 +1,9 @@
+{
+  "entries": [
+    { "name": "sunny",  "weight": 4, "tags": ["clear", "warm"], "transitions": { "rainy": 3 } },
+    { "name": "rainy",  "weight": 3, "tags": ["rain", "wet"],   "transitions": { "snowy": 2 } },
+    { "name": "snowy",  "weight": 2, "tags": ["snow", "cold"] },
+    { "name": "foggy",  "weight": 1, "tags": ["fog", "damp"] }
+  ],
+  "initialWeather": "sunny"
+}

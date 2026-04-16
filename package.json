@@ -1,0 +1,62 @@
+{
+  "name": "bic-game-systems",
+  "version": "0.1.0",
+  "description": "JSON-first Game Systems",
+  "license": "Apache-2.0",
+  "author": "BurningIceCube",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BurningIceCube/bic-game-systems.git"
+  },
+  "homepage": "https://github.com/BurningIceCube/bic-game-systems#readme",
+  "bugs": {
+    "url": "https://github.com/BurningIceCube/bic-game-systems/issues"
+  },
+  "type": "commonjs",
+  "main": "./dist/cjs/index.js",
+  "types": "./dist/cjs/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/cjs/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "game",
+    "systems",
+    "event-driven",
+    "typescript",
+    "json",
+    "modular",
+    "logging",
+    "weather",
+    "rpg",
+    "tracing"
+  ],
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "npm run clean && tsc -p tsconfig.build.cjs.json && tsc -p tsconfig.build.esm.json && node -e \"require('fs').writeFileSync('dist/esm/package.json','{\\\"type\\\":\\\"module\\\"}')\"",
+    "prepublishOnly": "npm run build",
+    "example:weather": "tsx examples/weather/example.ts",
+    "example:logger": "tsx examples/logger/example.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "jest": "^30.3.0",
+    "rimraf": "^6.1.3",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2"
+  },
+  "dependencies": {
+    "eventemitter3": "^5.0.4"
+  }
+}
