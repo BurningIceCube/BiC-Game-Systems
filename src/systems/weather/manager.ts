@@ -1,5 +1,7 @@
 import { EventEmitter } from "eventemitter3";
 import type { SystemEvents } from "../../events/bus.js";
+export type { LoadStrategy } from "../common.js";
+import type { LoadStrategy } from "../common.js";
 
 // ---------------------------------------------------------------------------
 // Core types
@@ -8,7 +10,6 @@ import type { SystemEvents } from "../../events/bus.js";
 export type WeatherContext = Record<string, unknown>;
 
 export type TagMatchMode = "all" | "any";
-export type LoadStrategy = "replace" | "merge" | "error";
 
 export interface WeatherEntry<TData = unknown> {
     /** Unique identifier. */

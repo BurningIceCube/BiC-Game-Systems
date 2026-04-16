@@ -1,5 +1,6 @@
 import type { LogEntry } from '../utilities/logger/logger.js';
-import type { WeatherEntry, LoadStrategy } from '../systems/weather/manager.js';
+import type { WeatherEntry } from '../systems/weather/manager.js';
+import type { LoadStrategy } from '../systems/common.js';
 
 /**
  * Defines the structure of system events that can be emitted and listened to within the application. Each event is categorized by its type (e.g., intents, facts) and includes the relevant data payload for that event. This interface serves as a contract for event handling, ensuring that all events adhere to a consistent format and can be easily managed throughout the application.
@@ -58,6 +59,39 @@ export interface SystemEvents {
     };
     // Emitted when weather entries were bulk-loaded into the registry
     "fact.weather.loaded": {
+        count: number;
+        strategy: LoadStrategy;
+    };
+
+    // == Reputation System Events ==
+
+    // Intents
+    // Intent to change reputation for an entity by a delta
+    "intent.reputation.change": {
+        entityId: string;
+        amount: number;
+    };
+    // Intent to set reputation for an entity to an absolute value
+    "intent.reputation.set": {
+        entityId: string;
+        value: number;
+    };
+
+    // Facts
+    "fact.reputation.changed": {
+        entityId: string;
+        previous: number;
+        current: number;
+        delta: number;
+        tierId: string;
+    };
+    "fact.reputation.tierChanged": {
+        entityId: string;
+        previousTierId: string;
+        currentTierId: string;
+        current: number;
+    };
+    "fact.reputation.loaded": {
         count: number;
         strategy: LoadStrategy;
     };

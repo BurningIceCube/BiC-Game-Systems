@@ -1,3 +1,6 @@
+// Shared types
+export type { LoadStrategy } from './systems/common.js';
+
 // Event bus
 export type { SystemEvents } from './events/bus.js';
 
@@ -15,7 +18,6 @@ export type {
     WeatherSelectionDebug,
     WeatherContext,
     TagMatchMode,
-    LoadStrategy,
 } from './systems/weather/manager.js';
 export type {
     WeatherConfig,

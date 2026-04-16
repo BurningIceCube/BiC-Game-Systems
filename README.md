@@ -19,6 +19,7 @@ The core philosophy is simple: **define once, done**.
 - [Dependencies](#dependencies)
 - [Current Systems](#current-systems)
 - [Weather System](#weather-system)
+- [Reputation System](#reputation-system)
 - [Logging and Tracing](#logging--tracing)
 
 ## Features
@@ -169,6 +170,7 @@ In general:
 The following systems are available in V3:
 
 - **Weather System** — Weighted random weather with tags and transitions.
+- **Reputation System** — Numeric reputation with tier resolution and clamped bounds.
 - **Logging & Tracing** — Production-ready structured logger with trace chaining.
 
 More systems (Cycle, Loot, Character, etc.) are being crafted and will be added soon.
@@ -232,6 +234,78 @@ manager.loadSnapshot(snapshot);
 - **WeatherLoader** — load configs from objects, JSON strings, or files with `replace` / `merge` / `error` strategies
 
 [More Example Code](./examples/weather/example.ts)
+
+---
+
+## Reputation System
+
+Track numeric reputation values per entity (factions, characters, guilds) with tier-based resolution, clamped bounds, and automatic tier-change detection — all defined in JSON.
+
+### Quick Config
+
+```json
+{
+  "entries": [
+    {
+      "id": "silverhand",
+      "name": "Order of the Silver Hand",
+      "type": "faction",
+      "initialValue": 0,
+      "minValue": -1000,
+      "maxValue": 1000,
+      "tiers": [
+        { "id": "exalted", "label": "Exalted", "threshold": 750 },
+        { "id": "honored", "label": "Honored", "threshold": 300 },
+        { "id": "neutral", "label": "Neutral", "threshold": -299 },
+        { "id": "hated",   "label": "Hated",   "threshold": -1000 }
+      ]
+    }
+  ]
+}
+```
+
+### Usage
+
+```ts
+import { ReputationManager } from "./systems/reputation/manager.js";
+import { ReputationLoader }  from "./systems/reputation/load.js";
+
+// Create from config
+const manager = new ReputationManager({ entities });
+
+// Or load from JSON / file
+const loader = new ReputationLoader(manager);
+await loader.loadConfigFromFile("./reputation.json");
+
+// Adjust reputation
+manager.change("silverhand", 100);
+manager.set("silverhand", 500);
+
+// Query state
+manager.getValue("silverhand");   // 500
+manager.getTierId("silverhand");  // "honored"
+manager.getReputation("silverhand"); // enriched view
+
+// Listen for changes
+manager.events.on("reputation:changed", (payload) => { /* ... */ });
+manager.events.on("reputation:tierChanged", (payload) => { /* ... */ });
+
+// Connect to the shared event bus
+manager.bindEvents(bus);
+
+// Save / restore state
+const snapshot = manager.toSnapshot();
+manager.loadSnapshot(snapshot);
+```
+
+### Key Features
+- **Tier resolution** — automatic tier lookup against a sorted threshold ladder
+- **Clamped bounds** — per-entity min/max values prevent overflow
+- **Entity registry** — full CRUD (`addEntity` / `upsertEntity` / `removeEntity` / `clearEntities`)
+- **History tracking** (configurable ring buffer, default 50)
+- **Snapshot serialization** for save/load game state
+- **Event-driven** — local `ReputationEvents` + shared `SystemEvents` bus bridge
+- **ReputationLoader** — load configs from objects, JSON strings, or files with `replace` / `merge` / `error` strategies
 
 ---
 
