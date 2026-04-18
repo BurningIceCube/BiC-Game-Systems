@@ -48,6 +48,7 @@
     "prepublishOnly": "npm run build",
     "test": "jest",
     "example:weather": "tsx examples/weather/example.ts",
+    "example:quest": "tsx examples/quest/example.ts",
     "example:logger": "tsx examples/logger/example.ts"
   },
   "devDependencies": {

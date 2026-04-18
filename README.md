@@ -73,6 +73,7 @@ npm run build
 
 ```bash
 npm run example:weather
+npm run example:quest
 npm run example:logger
 ```
 
@@ -427,6 +428,7 @@ manager.loadSnapshot(snapshot);
 - **Event-driven** — local `QuestEvents` + shared `SystemEvents` bus bridge
 - **QuestLoader** — load configs from objects, JSON strings, or files with `replace` / `merge` / `error` strategies
 
+[More Example Code](./examples/quest/example.ts)
 
 ---
 

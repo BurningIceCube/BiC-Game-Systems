@@ -1,0 +1,74 @@
+{
+  "quests": [
+    {
+      "id": "gather_herbs",
+      "title": "Gather Healing Herbs",
+      "description": "Collect medicinal herbs from the forest for the village healer.",
+      "objectives": [
+        { "id": "collect_moonpetal", "type": "collect", "description": "Collect Moonpetal flowers", "target": "moonpetal", "required": 5 },
+        { "id": "collect_thornroot", "type": "collect", "description": "Collect Thornroot", "target": "thornroot", "required": 3 }
+      ],
+      "rewards": { "xp": 100 }
+    },
+    {
+      "id": "find_the_cave",
+      "title": "Find the Cave",
+      "description": "Locate the hidden cave entrance deep in the Whispering Woods.",
+      "prerequisites": ["gather_herbs"],
+      "objectives": [
+        { "id": "talk_hermit", "type": "talk", "description": "Talk to the forest hermit", "target": "hermit", "required": 1 },
+        { "id": "explore_cave", "type": "visit", "description": "Find the cave entrance", "target": "cave_entrance", "required": 1 }
+      ],
+      "rewards": {
+        "xp": 250,
+        "actions": [
+          { "type": "intent.reputation.change", "entityId": "village_elders", "amount": 50 }
+        ]
+      }
+    },
+    {
+      "id": "slay_the_dragon",
+      "title": "Slay the Dragon",
+      "description": "Defeat the ancient dragon terrorizing the village.",
+      "levelRequired": 5,
+      "prerequisites": ["find_the_cave"],
+      "objectives": [
+        { "id": "kill_dragon", "type": "kill", "description": "Kill the dragon", "target": "dragon", "required": 1 },
+        { "id": "collect_scales", "type": "collect", "description": "Collect dragon scales", "target": "dragon_scale", "required": 5 }
+      ],
+      "rewards": {
+        "xp": 500,
+        "skillPoints": 2,
+        "actions": [
+          { "type": "intent.reputation.change", "entityId": "village_elders", "amount": 200 },
+          { "type": "intent.inventory.add", "inventoryId": "player_bag", "itemId": "dragon_trophy", "quantity": 1 }
+        ]
+      }
+    },
+    {
+      "id": "daily_patrol",
+      "title": "Daily Patrol",
+      "description": "Patrol the village perimeter and deal with any threats.",
+      "isRepeatable": true,
+      "objectives": [
+        { "id": "visit_north", "type": "visit", "description": "Check the north gate", "target": "north_gate", "required": 1 },
+        { "id": "visit_south", "type": "visit", "description": "Check the south gate", "target": "south_gate", "required": 1 },
+        { "id": "kill_wolves", "type": "kill", "description": "Clear out wolves", "target": "wolf", "required": 3 }
+      ],
+      "rewards": { "xp": 75 }
+    },
+    {
+      "id": "bounty_boss_orc",
+      "title": "Bounty: Orc Warlord",
+      "description": "Automatically awarded when the orc warlord is slain.",
+      "trigger": {
+        "event": "fact.character.died",
+        "match": { "characterId": "boss_orc" }
+      },
+      "objectives": [
+        { "id": "done", "type": "custom", "description": "Orc warlord defeated", "required": 1 }
+      ],
+      "rewards": { "xp": 300 }
+    }
+  ]
+}
