@@ -1,6 +1,7 @@
 import type { LogEntry } from '../utilities/logger/logger.js';
 import type { WeatherEntry } from '../systems/weather/manager.js';
 import type { LoadStrategy } from '../systems/common.js';
+import type { QuestReward } from '../systems/quest/manager.js';
 
 /**
  * Defines the structure of system events that can be emitted and listened to within the application. Each event is categorized by its type (e.g., intents, facts) and includes the relevant data payload for that event. This interface serves as a contract for event handling, ensuring that all events adhere to a consistent format and can be easily managed throughout the application.
@@ -94,6 +95,62 @@ export interface SystemEvents {
     "fact.reputation.loaded": {
         count: number;
         strategy: LoadStrategy;
+    };
+
+    // == Quest System Events ==
+
+    // Intents
+    "intent.quest.start": {
+        questId: string;
+    };
+    "intent.quest.updateObjective": {
+        questId: string;
+        objectiveId: string;
+        amount?: number;
+    };
+    "intent.quest.complete": {
+        questId: string;
+    };
+    "intent.quest.abandon": {
+        questId: string;
+    };
+
+    // Facts
+    "fact.quest.started": {
+        questId: string;
+    };
+    "fact.quest.objectiveUpdated": {
+        questId: string;
+        objectiveId: string;
+        previous: number;
+        current: number;
+        required: number;
+    };
+    "fact.quest.completed": {
+        questId: string;
+        rewards: QuestReward;
+    };
+    "fact.quest.abandoned": {
+        questId: string;
+    };
+    "fact.quest.loaded": {
+        count: number;
+        strategy: LoadStrategy;
+    };
+
+    // == Leveling System Events (intent-only, consumed by future leveling system) ==
+
+    "intent.leveling.awardXp": {
+        amount: number;
+    };
+    "intent.leveling.grantPoints": {
+        amount: number;
+    };
+    "intent.leveling.unlockSkill": {
+        skillId: string;
+    };
+    "intent.leveling.unlockPerk": {
+        perkId: string;
     };
 
 }

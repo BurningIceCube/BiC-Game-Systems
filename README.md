@@ -167,10 +167,11 @@ In general:
 
 ## Current Systems
 
-The following systems are available in V3:
+The following systems are available:
 
 - **Weather System** — Weighted random weather with tags and transitions.
 - **Reputation System** — Numeric reputation with tier resolution and clamped bounds.
+- **Quest System** — Quest tracking with objectives, prerequisites, and rewards.
 - **Logging & Tracing** — Production-ready structured logger with trace chaining.
 
 More systems (Cycle, Loot, Character, etc.) are being crafted and will be added soon.
@@ -306,6 +307,124 @@ manager.loadSnapshot(snapshot);
 - **Snapshot serialization** for save/load game state
 - **Event-driven** — local `ReputationEvents` + shared `SystemEvents` bus bridge
 - **ReputationLoader** — load configs from objects, JSON strings, or files with `replace` / `merge` / `error` strategies
+
+---
+
+## Quest System
+
+Track quests with objectives, prerequisite chains, level gates, reward dispatch, and event-driven auto-start triggers — all defined in JSON.
+
+### Quick Config
+
+```json
+{
+  "quests": [
+    {
+      "id": "find_the_cave",
+      "title": "Find the Cave",
+      "description": "Locate the hidden cave entrance.",
+      "objectives": [
+        { "id": "explore", "type": "visit", "description": "Find the cave entrance", "target": "cave_entrance", "required": 1 }
+      ],
+      "rewards": { "xp": 100 }
+    },
+    {
+      "id": "slay_the_dragon",
+      "title": "Slay the Dragon",
+      "description": "Defeat the ancient dragon terrorizing the village.",
+      "levelRequired": 10,
+      "prerequisites": ["find_the_cave"],
+      "objectives": [
+        { "id": "kill_dragon", "type": "kill", "description": "Kill the dragon", "target": "dragon", "required": 1 },
+        { "id": "collect_scales", "type": "collect", "description": "Collect dragon scales", "target": "dragon_scale", "required": 5 }
+      ],
+      "rewards": {
+        "xp": 500,
+        "skillPoints": 2,
+        "actions": [
+          { "type": "intent.reputation.change", "entityId": "villagers", "amount": 200 },
+          { "type": "intent.inventory.add", "inventoryId": "player_bag", "itemId": "dragon_trophy", "quantity": 1 }
+        ]
+      }
+    },
+    {
+      "id": "auto_bounty",
+      "title": "Bounty: Boss Slain",
+      "description": "Automatically awarded when a boss dies.",
+      "trigger": {
+        "event": "fact.character.died",
+        "match": { "characterId": "boss_orc" }
+      },
+      "objectives": [
+        { "id": "done", "type": "custom", "description": "Boss defeated", "required": 1 }
+      ],
+      "rewards": { "xp": 300 }
+    }
+  ]
+}
+```
+
+### Usage
+
+```ts
+import { QuestManager } from "./systems/quest/manager.js";
+import { QuestLoader }  from "./systems/quest/load.js";
+
+// Create from config
+const manager = new QuestManager({ quests });
+
+// Or load from JSON / file
+const loader = new QuestLoader(manager);
+await loader.loadConfigFromFile("./quests.json");
+
+// Inject a level provider for prerequisite checks
+manager.setLevelProvider(() => leveling.getLevel());
+
+// Start and progress quests
+manager.canStartQuest("find_the_cave");          // prerequisite check
+manager.startQuest("find_the_cave");
+manager.updateObjective("find_the_cave", "explore");  // +1 progress
+manager.completeQuest("find_the_cave");          // force-complete
+
+// Abandon
+manager.abandonQuest("slay_the_dragon");
+
+// Query state
+manager.getQuest("slay_the_dragon");             // enriched view with status & progress
+manager.getAllQuests();                           // all quests with status
+manager.getActiveQuests();                       // in-progress quests
+manager.getCompletedQuests();                    // completed quests
+
+// Quest registry
+manager.addQuest(newQuest);
+manager.removeQuest("old_quest");
+
+// Listen for changes
+manager.events.on("quest:started", (payload) => { /* ... */ });
+manager.events.on("quest:objectiveUpdated", (payload) => { /* ... */ });
+manager.events.on("quest:completed", (payload) => { /* ... */ });
+
+// Connect to the shared event bus
+manager.bindEvents(bus);
+
+// Save / restore state
+const snapshot = manager.toSnapshot();
+manager.loadSnapshot(snapshot);
+```
+
+### Key Features
+- **Objective tracking** — typed objectives (`kill`, `collect`, `talk`, `visit`, `reach_level`, `custom`) with progress counters and auto-complete when all are met
+- **Prerequisites** — quests can require other quests to be completed first
+- **Level gates** — optional `levelRequired` checked via an injectable `levelProvider` callback
+- **Repeatable quests** — `isRepeatable` flag allows re-starting after completion
+- **Reward dispatch** — on completion, built-in shortcuts (`xp`, `skillPoints`, `unlockSkills`, `unlockPerks`) and arbitrary `RewardAction` intents are dispatched on the shared bus
+- **Declarative triggers** — `trigger` config auto-starts a quest when a matching bus event fires, with dot-notation payload matching
+- **Quest registry** — full CRUD (`addQuest` / `upsertQuest` / `removeQuest` / `clearQuests`)
+- **History tracking** (configurable ring buffer, default 50)
+- **Snapshot serialization** for save/load game state (quest definitions + progress)
+- **Event-driven** — local `QuestEvents` + shared `SystemEvents` bus bridge
+- **QuestLoader** — load configs from objects, JSON strings, or files with `replace` / `merge` / `error` strategies
+
 
 ---
 
