@@ -29,14 +29,13 @@ export { Logger, SystemLogger, defaultLogger } from './utilities/logger/logger.j
 export type {
     LogEntry,
     LogLevel,
-    LogSink,
+    LoggerOptions,
     TraceChain,
     TraceResult,
 } from './utilities/logger/logger.js';
 
-// Sinks
-export { consoleSink, fileSink, MemorySink, DatadogSink } from './utilities/logger/sinks.js';
-export type { DatadogSinkOptions } from './utilities/logger/sinks.js';
+// Memory sink (test / introspection utility)
+export { MemorySink } from './utilities/logger/sinks.js';
 
 // Tracing
 export { TraceBundler, TracedEventEmitter } from './utilities/logger/trace.js';

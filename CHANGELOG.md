@@ -2,5 +2,7 @@
 Initial release.
 Systems:
 - Weather
+- Quest
+- Reputation
 Utilities:
-- Logger
+- Logger & Tracing

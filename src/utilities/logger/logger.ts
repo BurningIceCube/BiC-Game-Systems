@@ -1,10 +1,22 @@
 // logger.ts
+// Wraps LogLayer to provide structured logging with trace-chain support.
+// Users get full LogLayer customizability (transports, plugins, child loggers)
+// while BiC systems retain the trace lifecycle they depend on.
+
+import { LogLayer, ConsoleTransport } from 'loglayer';
+import type { ILogLayer, LogLayerConfig } from 'loglayer';
 import { newTraceId } from './common.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
+/**
+ * Structured log entry used by the trace system.
+ * These are captured into {@link TraceChain}s — they are *not* sent to
+ * LogLayer (LogLayer receives its own calls).  This keeps the trace
+ * ledger lightweight and independent of the chosen transport.
+ */
 export interface LogEntry {
   /** Unix timestamp (ms). */
   timestamp: number;
@@ -20,8 +32,6 @@ export interface LogEntry {
   /** Optional human-readable message. */
   message?: string;
 }
-
-export type LogSink = (entry: LogEntry) => void;
 
 // ── Trace chain ───────────────────────────────────────────────────────────────
 
@@ -42,56 +52,82 @@ export interface TraceResult extends TraceChain {
   duration: number;
 }
 
-// ── Level ordinals ────────────────────────────────────────────────────────────
+// ── Logger options ────────────────────────────────────────────────────────────
 
-const LEVELS: Record<LogLevel, number> = { debug: 0, info: 1, warn: 2, error: 3 };
+export interface LoggerOptions {
+  /**
+   * Provide a fully-configured {@link LogLayer} instance.
+   * When set, `logLayerConfig` is ignored.
+   */
+  logLayer?: ILogLayer;
+
+  /**
+   * Configuration object forwarded to `new LogLayer(config)`.
+   * Ignored when `logLayer` is provided.
+   *
+   * If neither `logLayer` nor `logLayerConfig` is given, a default
+   * `ConsoleTransport` is created automatically.
+   */
+  logLayerConfig?: LogLayerConfig;
+}
 
 // ── Core logger ───────────────────────────────────────────────────────────────
 
 /**
- * Instance-based structured logger with trace-chain support.
+ * Structured logger with trace-chain support, powered by
+ * [LogLayer](https://loglayer.dev).
  *
- * Every Logger instance owns its own sinks, min-level, and active trace —
- * no shared global state.  Use {@link defaultLogger} for the common case,
- * or create `new Logger()` when you need full isolation (tests, plugins, etc.).
+ * Every `Logger` owns its own LogLayer instance and active trace.
+ * Use {@link defaultLogger} for the common case, or create `new Logger()`
+ * when you need full isolation (tests, plugins, etc.).
  *
  * @example
  * ```ts
- * import { defaultLogger, consoleSink } from 'bic-game-systems';
+ * import { defaultLogger } from 'bic-game-systems';
  *
- * defaultLogger.addSink(consoleSink);
+ * // Uses ConsoleTransport by default — just start logging:
  * defaultLogger.log('info', 'App', 'ready');
  *
- * // Isolated instance for a test:
- * const logger = new Logger();
+ * // Full customization via LogLayer:
+ * import { Logger } from 'bic-game-systems';
+ * import { LogLayer } from 'loglayer';
+ * const logger = new Logger({
+ *   logLayerConfig: { transport: new ConsoleTransport({ logger: console }) },
+ * });
  * ```
  */
 export class Logger {
-  private sinks: LogSink[] = [];
-  private minLevel: LogLevel = 'debug';
   private activeTrace: TraceChain | null = null;
 
-  // ── Sinks ──────────────────────────────────────────────────────────────
+  /**
+   * The underlying LogLayer instance.
+   * Access it directly when you need LogLayer-specific features
+   * (child loggers, plugins, transports, etc.).
+   */
+  public readonly ll: ILogLayer;
 
-  /** Register a sink that receives every log entry at or above the min level. */
-  addSink(sink: LogSink): void { this.sinks.push(sink); }
-
-  /** Remove a previously added sink. */
-  removeSink(sink: LogSink): void {
-    this.sinks = this.sinks.filter(s => s !== sink);
+  constructor(options?: LoggerOptions) {
+    if (options?.logLayer) {
+      this.ll = options.logLayer;
+    } else {
+      this.ll = new LogLayer(
+        options?.logLayerConfig ?? {
+          transport: new ConsoleTransport({ logger: console }),
+        },
+      );
+    }
   }
-
-  /** Discard all sinks (useful between tests). */
-  clearSinks(): void { this.sinks = []; }
-
-  /** Only emit entries at this level and above. */
-  setMinLevel(level: LogLevel): void { this.minLevel = level; }
-
-  /** Returns the current minimum log level. */
-  getMinLevel(): LogLevel { return this.minLevel; }
 
   // ── Core log ───────────────────────────────────────────────────────────
 
+  /**
+   * Emit a structured log entry.
+   *
+   * The entry is:
+   * 1. Captured into the active trace chain (if any).
+   * 2. Forwarded to LogLayer with `system`, `event`, and `traceId` as
+   *    contextual metadata so every configured transport receives them.
+   */
   log(
     level: LogLevel,
     system: string,
@@ -100,26 +136,47 @@ export class Logger {
     traceId?: string,
     message?: string,
   ): void {
-    if (LEVELS[level] < LEVELS[this.minLevel]) return;
-
     const resolvedTraceId = traceId ?? this.activeTrace?.traceId;
 
-    const entry: LogEntry = {
-      timestamp: Date.now(),
-      level,
-      system,
-      event,
-      ...(resolvedTraceId !== undefined && { traceId: resolvedTraceId }),
-      ...(data !== undefined && { data }),
-      ...(message !== undefined && { message }),
-    };
-
-    // Capture into the active trace chain if one is open.
+    // ── Trace capture (lightweight — no transport overhead) ──────────
     if (this.activeTrace) {
+      const entry: LogEntry = {
+        timestamp: Date.now(),
+        level,
+        system,
+        event,
+        ...(resolvedTraceId !== undefined && { traceId: resolvedTraceId }),
+        ...(data !== undefined && { data }),
+        ...(message !== undefined && { message }),
+      };
       this.activeTrace.entries.push(entry);
     }
 
-    for (const sink of this.sinks) sink(entry);
+    // ── LogLayer dispatch ───────────────────────────────────────────
+    let builder = this.ll.withContext({
+      system,
+      event,
+      ...(resolvedTraceId !== undefined && { traceId: resolvedTraceId }),
+    });
+
+    if (data !== undefined) {
+      if (data instanceof Error) {
+        builder = builder.withError(data) as typeof builder;
+      } else {
+        builder = builder.withMetadata(
+          typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : { data },
+        ) as typeof builder;
+      }
+    }
+
+    const msg = message ?? event;
+
+    switch (level) {
+      case 'debug': builder.debug(msg); break;
+      case 'info':  builder.info(msg);  break;
+      case 'warn':  builder.warn(msg);  break;
+      case 'error': builder.error(msg); break;
+    }
   }
 
   // ── Trace lifecycle ────────────────────────────────────────────────────
@@ -200,24 +257,17 @@ export class Logger {
 }
 
 // ── Module-level default instance ─────────────────────────────────────────────
-//
-// Use this for simple setups where one shared logger is fine.
-// For full isolation (tests, multiple plugins, etc.) create your own:
-//
-//   const logger = new Logger();
-//   logger.addSink(consoleSink);
-//
 
 /**
- * Ready-to-use shared Logger instance.
+ * Ready-to-use shared Logger instance with a default ConsoleTransport.
  *
- * Most applications only need one logger — configure it once at startup:
+ * Most applications only need one logger — start using it immediately:
  * ```ts
- * import { defaultLogger, consoleSink } from 'bic-game-systems';
- * defaultLogger.addSink(consoleSink);
+ * import { defaultLogger } from 'bic-game-systems';
+ * defaultLogger.log('info', 'App', 'ready');
  * ```
  *
- * For isolation create `new Logger()` instead.
+ * For full customization, create `new Logger({ logLayerConfig: { ... } })`.
  */
 export const defaultLogger = new Logger();
 

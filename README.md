@@ -156,6 +156,8 @@ In general:
 ## Dependencies
 
 - [eventemitter3](https://www.npmjs.com/package/eventemitter3) — Lightweight event emitter for decoupled communication between systems.
+- [loglayer](https://loglayer.dev) — Universal logging layer with pluggable transports (console, pino, winston, datadog, and more).
+- [serialize-error](https://www.npmjs.com/package/serialize-error) — Serializes Error objects into plain objects for structured logging.
 
 ### Dev Dependencies
 
@@ -430,31 +432,66 @@ manager.loadSnapshot(snapshot);
 
 ## Logging & Tracing
 
-BiC Game Systems includes a powerful, production-ready structured logger with tracing capabilities built in from day one.
+BiC Game Systems includes a powerful, production-ready structured logger with tracing capabilities built in from day one. Under the hood, logging is powered by [LogLayer](https://loglayer.dev) — giving you full control over transports, plugins, and output formats while BiC handles trace chains automatically.
 
-### Sinks
-
-Sinks represent destinations for log entries. Each sink implements a simple interface that accepts log entries and handles them as needed.
-
-Three built-in sinks — mix and match:
+### Quick Start
 
 ```ts
-import { defaultLogger }                        from 'bic-game-systems';
-import { consoleSink, fileSink, MemorySink }     from 'bic-game-systems';
+import { defaultLogger } from 'bic-game-systems';
 
-defaultLogger.addSink(consoleSink);                    // pretty ANSI output to stdout
-defaultLogger.addSink(fileSink('./logs/app.jsonl'));    // one JSON line per entry (JSONL)
-
-const mem = new MemorySink();
-defaultLogger.addSink(mem.sink);                       // in-memory; great for tests
-
-// Need full isolation? Create your own instance:
-import { Logger } from 'bic-game-systems';
-const logger = new Logger();
-logger.addSink(consoleSink);
+// Ready to use out of the box — ConsoleTransport is included by default.
+defaultLogger.log('info', 'App', 'ready', undefined, undefined, 'Server is up');
+defaultLogger.log('warn', 'App', 'config:missing', { key: 'DB_URL' });
+defaultLogger.log('error', 'App', 'crash', new Error('boom'));
 ```
 
-`DatadogSink` is also available — buffers entries and ships them to the Datadog HTTP intake in batches.
+### Custom Transports
+
+Swap in any LogLayer-compatible transport — pino, winston, datadog, or your own:
+
+```ts
+import { Logger } from 'bic-game-systems';
+import { ConsoleTransport } from 'loglayer';
+
+// Custom LogLayer config
+const logger = new Logger({
+    logLayerConfig: {
+        transport: new ConsoleTransport({ logger: console }),
+    },
+});
+
+// Or inject a fully-configured LogLayer instance
+import { LogLayer } from 'loglayer';
+const ll = new LogLayer({ /* your config */ });
+const logger2 = new Logger({ logLayer: ll });
+
+// Access the underlying LogLayer instance directly for advanced features
+logger.ll.withContext({ module: 'advanced' }).info('Direct LogLayer access');
+```
+
+### MemorySink (Tests & Introspection)
+
+`MemorySink` captures structured `LogEntry` objects via a LogLayer plugin — ideal for tests and trace replay:
+
+```ts
+import { Logger, MemorySink } from 'bic-game-systems';
+import { ConsoleTransport }   from 'loglayer';
+
+const mem = new MemorySink();
+const logger = new Logger({
+    logLayerConfig: {
+        transport: new ConsoleTransport({ logger: console }),
+        plugins:   [mem.plugin()],
+    },
+});
+
+logger.log('info', 'App', 'ready');
+
+mem.getBySystem('App');        // entries from a specific system
+mem.getByLevel('warn');        // entries at warn+
+mem.getChain(someTraceId);     // entries belonging to one trace
+mem.clear();                   // wipe between test cases
+```
 
 ### Basic Logging
 
@@ -462,8 +499,6 @@ logger.addSink(consoleSink);
 defaultLogger.log('info',  'App', 'ready',         undefined, undefined, 'Server is up');
 defaultLogger.log('warn',  'App', 'config:missing', { key: 'DB_URL' });
 defaultLogger.log('error', 'App', 'crash',         new Error('boom'));
-
-defaultLogger.setMinLevel('warn'); // silence debug + info
 ```
 
 ### SystemLogger

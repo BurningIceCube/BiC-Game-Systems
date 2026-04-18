@@ -1,12 +1,10 @@
 import * as path from "node:path";
 import { defaultLogger } from "../../src/utilities/logger/logger.js";
-import { consoleSink } from "../../src/utilities/logger/sinks.js";
 import { TracedEventEmitter } from "../../src/utilities/logger/trace.js";
 import { WeatherManager } from "../../src/systems/weather/manager.js";
 import { WeatherLoader } from "../../src/systems/weather/load.js";
 
-// consoleSink prints every captured event to stdout in real-time.
-defaultLogger.addSink(consoleSink);
+// defaultLogger uses ConsoleTransport out of the box — no setup needed.
 
 // All *.weather.* events are auto-captured — no manual begin/end traces.
 // The bus uses defaultLogger; pass your own `new Logger()` for isolation.
