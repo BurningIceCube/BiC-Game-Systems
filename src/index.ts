@@ -24,6 +24,43 @@ export type {
     LoadOptions,
 } from './systems/weather/load.js';
 
+// Reputation system
+export { ReputationManager }       from './systems/reputation/manager.js';
+export { ReputationLoader }        from './systems/reputation/load.js';
+export type {
+    ReputationEntityType,
+    ReputationTier,
+    ReputationEntity,
+    ReputationEntityInput,
+    ReputationManagerOptions,
+    ReputationEvents,
+    ReputationSnapshot,
+    ReputationHistoryEntry,
+} from './systems/reputation/manager.js';
+export type {
+    ReputationConfig,
+} from './systems/reputation/load.js';
+
+// Quest system
+export { QuestManager }            from './systems/quest/manager.js';
+export { QuestLoader }             from './systems/quest/load.js';
+export type {
+    Quest,
+    QuestObjective,
+    QuestReward,
+    RewardAction,
+    QuestTrigger,
+    QuestStatus,
+    QuestProgress,
+    QuestManagerOptions,
+    QuestEvents,
+    QuestSnapshot,
+    QuestHistoryEntry,
+} from './systems/quest/manager.js';
+export type {
+    QuestConfig,
+} from './systems/quest/load.js';
+
 // Logger
 export { Logger, SystemLogger, defaultLogger } from './utilities/logger/logger.js';
 export type {
