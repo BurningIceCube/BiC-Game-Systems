@@ -51,17 +51,35 @@ The following are known design limitations to be addressed in a future release:
 
 ## Getting Started
 
-### Prerequisites
+### Installation
+
+Install from [npm](https://www.npmjs.com/package/bic-game-systems):
+
+```bash
+npm install bic-game-systems
+```
+
+Then import any system directly:
+
+```ts
+import { WeatherManager, QuestManager, ReputationManager, defaultLogger } from 'bic-game-systems';
+```
+
+---
+
+### Contributing / Local Development
+
+#### Prerequisites
 - [Node.js](https://nodejs.org/) (v18 or higher recommended)
 - npm
 
-### Installation
+#### Setup
 
 ```bash
 npm install
 ```
 
-### Build
+#### Build
 
 ```bash
 npm run build
