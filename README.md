@@ -32,11 +32,16 @@ The core philosophy is simple: **define once, done**.
 - **Snapshot Serialization** — Save and load game state with built-in snapshot functionality.
 
 ## Planned Features
-- **Wrappers** — Composite systems that coordinate multiple core systems (e.g. Combat, Party, Vendor).
-- **Builder UI** — Browser-based interface for creating and editing JSON configs with live previews and validation.
-- **EasyLang** — Support for formulas and expressions inside JSON (e.g. `"damage": "2D6+STR"`).
-- **NPM Packages** — Publish core systems as separate packages for easier consumption and versioning.
-- **More Systems** — Character, Inventory, Quests, Factions, Loot, Cycle, and more.
+
+- [ ] **Composites** — Orchestration layers that coordinate multiple core systems and translate between their event namespaces — e.g. a Combat wrapper coordinating Character, Inventory, and Status managers through a shared bus.
+- [ ] **Builder UI** — Browser-based interface for creating and editing JSON configs with live previews and validation. Dependent on EasyLang reaching a stable API first, as formula fields require a working evaluator to be useful in preview.
+- [ ] **EasyLang** — Support for sandboxed formulas and expressions inside JSON configs (e.g. `"damage": "2D6+STR"`). Evaluation must be sandboxed — user-provided expressions should never reach `eval`.
+- [ ] **NPM Packages** — Publish core systems as separate packages for independent consumption and versioning. The primary benefit is tree-shaking: consumers should not ship the full quest system if they only need weather.
+- [ ] **Schema Export** — Emit JSON Schema or Zod schemas for every config type. Enables external tooling, powers the Builder UI validator, and closes the loop on the opt-in validation bounty item.
+- [ ] **Snapshot Adapters** — A thin `SnapshotAdapter` interface for plugging in persistence backends (localStorage, IndexedDB, REST, filesystem). Snapshot serialization exists; standardized persistence does not.
+- [ ] **Dry-run / Simulation Mode** — A mode where intents are evaluated and outcomes computed but facts are never emitted and state is never mutated. Useful for AI, game logic previews, and testing without side effects.
+- [ ] **Cross-system Reaction Registry** — Declarative JSON config for wiring cross-system reactions (e.g. quest completion → reputation change). Right now this is manual event wiring. A reaction registry would complete the "define once, done" promise.
+- [ ] **More Systems** — Character, Inventory, Quests, Factions, Loot, Cycle, and more.
 
 ---
 
@@ -44,8 +49,13 @@ The core philosophy is simple: **define once, done**.
 
 The following are known design limitations to be addressed in a future release:
 
-- [ ] **Concurrent trace chains in Logger** — `Logger` only supports a single active trace at a time (`beginTrace` auto-ends the previous). A stack-based approach or named concurrent traces would allow multiple overlapping trace chains. The `TraceBundler` partially addresses this for pattern-based grouping, but the two mechanisms should be unified.
-- [ ] **Input validation in WeatherLoader** — `loadFromJson` / `loadConfigFromJson` parse JSON and cast the result without validating the shape of the data. Adding structural validation (e.g. via Zod or manual checks) would prevent confusing runtime errors deep inside the manager when malformed JSON is provided.
+- [ ] **Concurrent trace chains in Logger** — Unify `beginTrace` and `TraceBundler` into a single trace API supporting named, concurrent, and nested chains. The two mechanisms solve overlapping problems and should be consolidated behind one coherent interface.
+- [ ] **Optional input validation** — Add opt-in Zod schema validation at manager instantiation, disabled by default. Invalid JSON should throw at load time with a clear error, not silently fail at runtime deep inside the manager.
+- [ ] **TS Declaration Merging** — Use TypeScript declaration merging on the universal bus so consumers can extend `SystemEvents` with their own event types without forking the core types.
+- [ ] **Snapshot versioning** — Snapshots have no schema version field. A saved state from an earlier release can silently break on a newer one. Add a `version` field and a migration layer to handle forward compatibility.
+- [ ] **Event wildcard subscriptions** — The `intent.*` / `fact.*` naming convention implies wildcard subscriptions (e.g. `fact.weather.*`) but the API does not support them. The convention promises this; the bus should deliver it.
+- [ ] **Loader merge strategy contract** — The `replace` / `merge` / `error` strategies are present across all loaders but the behavior of `merge` when IDs conflict is undefined. This needs a documented and tested contract.
+- [ ] **Circular prerequisite detection** — Quest prerequisites have no cycle guard. `A requires B, B requires A` will silently deadlock. Cycle detection should run at load time and throw with a clear error.
 
 ---
 
